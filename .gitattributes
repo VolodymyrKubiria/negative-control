@@ -1,0 +1,19 @@
+# Shell scripts and control fixtures must arrive with LF on every platform.
+#
+# 🔴 Measured 2026-08-15 on a real windows-latest runner: without this, Git for
+# Windows checks files out with CRLF, and `MATCH some string\r` stops matching
+# the hook's output. Every EXPECT in attention-anchor.cases failed while the
+# guards passed — because the guards only test empty-versus-non-empty output and
+# never compare a string, so they survived the same corruption unnoticed.
+#
+# The dependency gates all passed on that run. It was never a missing tool.
+* text=auto eol=lf
+
+*.sh     text eol=lf
+*.cases  text eol=lf
+*.mjs    text eol=lf
+*.json   text eol=lf
+*.md     text eol=lf
+*.yml    text eol=lf
+
+*.png binary

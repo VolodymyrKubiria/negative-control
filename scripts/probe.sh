@@ -151,12 +151,22 @@ C6
   printf '%s' "$out" | grep -q "MUTATION DID NOT APPLY" \
     || { echo "🔴 ⑥ no-op mutation did not say so"; f=1; }
 
+  # ⑧ A case file with CRLF line endings must still work. This is control N+1
+  #    for a real failure: on windows-latest, Git checks out CRLF by default, and
+  #    `MATCH text\r` stopped matching the hook output. Every EXPECT in the
+  #    anchor suite failed while both guards passed — they compare empty versus
+  #    non-empty and never look at a string, so the same corruption went by them.
+  printf 'MUTATE s|TRIP|ZZZZ|\r\nEXPECT crlf case file\r\n  {"tool_input":{"command":"TRIP"}}\r\n  MATCH FIXTURE-ALARM\r\n' \
+    > "$T/probes/fixture.cases"
+  out="$(run_probe fixture)"; rc=$?
+  [ $rc -eq 0 ] || { echo "🔴 ⑧ a CRLF case file broke the harness (exit $rc)"; f=1; }
+
   # ⑦ VACUUM: an invented hook name must not produce a verdict at all.
   run_probe zzz-no-such-hook >/dev/null; rc=$?
   [ $rc -eq 2 ] || { echo "🔴 ⑦ a nonexistent hook did not exit 2 (got $rc)"; f=1; }
 
   if [ $f -eq 0 ]; then
-    echo "✅ probe — 7/7 controls pass, the harness itself may be trusted"
+    echo "✅ probe — 8/8 controls pass, the harness itself may be trusted"
   else
     echo "❌ probe UNSOUND — every report it produces is suspect"
   fi
@@ -267,6 +277,7 @@ echo "🧪 $HOOK_NAME — controls${MUTATE:+  (MUTATED: hook deliberately blinde
 echo
 
 while IFS= read -r line || [ -n "$line" ]; do
+  line="${line%$'\r'}"          # a CRLF checkout must not silently break MATCH
   trimmed="${line#"${line%%[![:space:]]*}"}"
   case "$trimmed" in
     ''|'#'*|MUTATE\ *) continue ;;
