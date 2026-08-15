@@ -1,5 +1,7 @@
 # negative-control
 
+[![controls](https://github.com/VolodymyrKubiria/negative-control/actions/workflows/controls.yml/badge.svg)](https://github.com/VolodymyrKubiria/negative-control/actions/workflows/controls.yml)
+
 **A detector that found nothing and a detector that cannot see produce byte-identical output.**
 
 Every tool in this repository refuses to report until it has proven it can still see.
@@ -211,10 +213,13 @@ fiction cannot pass for a guard finding nothing.
 /plugin install negative-control
 ```
 
-> ⚠️ The plugin path is **not yet verified against a live install**. The manifests validate
-> as JSON and follow the documented layout, but shipping an untested claim in a repository
-> about untested claims would be a poor joke. Verified in `v0.2.0` or corrected — whichever
-> the evidence says.
+> ✅ **Verified**, not asserted: the plugin reports `✔ loaded` with `Hooks (2)` registered,
+> checked on a fresh clone of the published repository. It did **not** load before — see
+> CHANGELOG 0.4.0, where `validate --strict` reported "passed" on a plugin whose hooks
+> never loaded at all.
+>
+> 🔴 Still untested: the `/plugin marketplace add` + `/plugin install` route specifically.
+> The load was exercised through `--plugin-dir`.
 
 ## Configure
 

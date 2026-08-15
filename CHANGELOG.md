@@ -1,5 +1,55 @@
 # Changelog
 
+## 0.5.0 — 2026-08-15
+
+**Three operating systems, and the Windows runner earned its keep on the first run.**
+
+A CI matrix now runs every control suite on `ubuntu-latest`, `macos-latest` and
+`windows-latest`. No `continue-on-error` anywhere: a badge kept green by ignoring
+a failing platform is the thing this repository argues against.
+
+**What Windows caught**
+
+`probe.sh --all` failed there while all four dependency gates passed — jq, bash,
+python3 and node are all present on that runner. Git for Windows checks out CRLF
+by default, so `MATCH some string\r` stopped matching hook output, and every
+EXPECT in `attention-anchor.cases` failed.
+
+🔑 **Which suites survived is the instructive part.** Both guards passed under the
+identical corruption, because their cases only compare empty versus non-empty
+output and never examine a string. A control that never looks at content cannot
+notice content being wrong. Only the suite asserting on text could see it — an
+argument for MATCH-based cases wherever the output carries meaning.
+
+**Fixed, in two layers**
+
+- `.gitattributes` forces LF for `sh`/`cases`/`mjs`/`json`/`md`/`yml`.
+- `probe.sh` strips a trailing `\r` when parsing, so a case file that arrives with
+  CRLF anyway still works instead of reporting "the hook stayed silent" about a
+  hook that was never asked.
+- Control ⑧, per this repository's own rule that a real failure becomes the next
+  control: a fixture written with explicit `\r\n` must still pass. Inverted —
+  removing the strip turns exactly that one control red.
+
+**Now verified on real machines**
+
+| Platform | Status |
+|---|---|
+| Linux (`ubuntu-latest`) | ✅ all suites, all inversions |
+| macOS (`macos-latest`) | ✅ all suites, all inversions |
+| Windows (`windows-latest`, Git Bash) | ✅ all suites, all inversions |
+
+The workflow's first step measures the environment rather than assuming it —
+bash version, which tools exist, and which `sed` dialect, decided by feeding
+`\+` to sed and looking.
+
+**Still not verified**
+
+- The `/plugin marketplace add` + `/plugin install` route. The plugin load was
+  exercised through `--plugin-dir` on macOS only.
+- Any machine without `jq`. The guards exit 0 silently there; `doctor` says so,
+  but only if it is run.
+
 ## 0.4.0 — 2026-08-15
 
 **The plugin never loaded. Nothing said so.**

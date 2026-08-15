@@ -1,7 +1,7 @@
 {
   "name": "negative-control",
   "displayName": "negative-control",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Hooks that prove they can still see before you trust their silence.",
   "author": {
     "name": "Volodymyr Kubiria",
