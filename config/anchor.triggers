@@ -1,0 +1,5 @@
+# One ERE per line, matched case-insensitively against the user's prompt.
+audit
+prove|justify
+carefully|thorough
+verdict|conclude

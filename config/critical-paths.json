@@ -1,0 +1,8 @@
+{
+  "reason": "This chain has been broken twice by silent edits. Its invariants are not fully expressed by the test suite, so a diff that looks like cleanup can still remove a guarantee.",
+  "paths": [
+    "src/core/Ledger.ts",
+    "src/core/migrations/",
+    "SecurityRules.kt"
+  ]
+}

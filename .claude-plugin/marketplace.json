@@ -1,0 +1,13 @@
+{
+  "name": "negative-control",
+  "owner": { "name": "Volodymyr Kubiria", "url": "https://github.com/VolodymyrKubiria" },
+  "plugins": [
+    {
+      "name": "negative-control",
+      "source": ".",
+      "description": "Hooks that prove they can still see before you trust their silence.",
+      "version": "0.1.0",
+      "keywords": ["hooks", "guardrails", "testing", "controls"]
+    }
+  ]
+}

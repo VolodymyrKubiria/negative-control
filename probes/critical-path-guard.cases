@@ -1,0 +1,40 @@
+# Controls for critical-path-guard.
+# MUTATE empties the configured path list, so nothing can ever match.
+MUTATE s/^names="\$(jq.*$/names=""/
+
+# ── sensitivity ──
+
+EXPECT Edit of a protected file
+  {"tool_input":{"file_path":"/repo/src/core/Ledger.ts"}}
+
+EXPECT Edit inside a protected directory
+  {"tool_input":{"file_path":"/repo/src/core/migrations/003_add_index.sql"}}
+
+EXPECT Bash: sed -i on a protected file
+  {"tool_input":{"command":"sed -i '' 's/x/y/' src/core/Ledger.ts"}}
+
+EXPECT Bash: heredoc overwriting a protected file
+  {"tool_input":{"command":"cat <<EOT > src/core/Ledger.ts\nx\nEOT"}}
+
+EXPECT protected file matched by bare name, any directory
+  {"tool_input":{"file_path":"/other/place/SecurityRules.kt"}}
+
+# ── specificity ──
+
+SILENT Edit of an ordinary file
+  {"tool_input":{"file_path":"/repo/src/ui/Button.tsx"}}
+
+SILENT Bash: grep of a protected file
+  {"tool_input":{"command":"grep -n balance src/core/Ledger.ts"}}
+
+SILENT Bash: git diff of a protected file
+  {"tool_input":{"command":"git diff src/core/Ledger.ts"}}
+
+SILENT Bash: commit message naming a protected file
+  {"tool_input":{"command":"git commit -m \"refactor: tidy src/core/Ledger.ts imports\""}}
+
+SILENT Bash: cat of a protected file
+  {"tool_input":{"command":"cat src/core/Ledger.ts"}}
+
+SILENT empty input
+  {"tool_input":{}}

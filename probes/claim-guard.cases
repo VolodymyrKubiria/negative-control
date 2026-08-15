@@ -1,0 +1,41 @@
+# Controls for claim-guard.
+# MUTATE blinds the hook by making the claims board read as empty. Under
+# --mutate every EXPECT below must go silent, or that branch is not proven.
+MUTATE s/^claimed="\$(grep.*$/claimed=""/
+
+# ── sensitivity: a claimed file, through every door an agent can use ──
+
+EXPECT Edit of a claimed doc
+  {"tool_input":{"file_path":"/repo/docs/ARCHITECTURE.md"}}
+
+EXPECT Bash: python writes to a claimed doc
+  {"tool_input":{"command":"python3 -c \"open('docs/ARCHITECTURE.md','a')\""}}
+
+EXPECT Bash: sed -i on a claimed doc
+  {"tool_input":{"command":"sed -i '' s/a/b/ docs/ARCHITECTURE.md"}}
+
+EXPECT Bash: heredoc into a claimed doc
+  {"tool_input":{"command":"cat <<EOT > docs/ARCHITECTURE.md\nx\nEOT"}}
+
+# ── specificity: everything that must stay quiet ──
+
+SILENT Edit of an unclaimed file
+  {"tool_input":{"file_path":"/repo/src/main.ts"}}
+
+SILENT Bash: reading a claimed doc with grep
+  {"tool_input":{"command":"grep -n section docs/ARCHITECTURE.md"}}
+
+SILENT Bash: git log on a claimed doc
+  {"tool_input":{"command":"git log --oneline -5 docs/ARCHITECTURE.md"}}
+
+SILENT Edit of a RELEASED claim
+  {"tool_input":{"file_path":"/repo/src/parser.ts"}}
+
+SILENT empty input
+  {"tool_input":{}}
+
+SILENT Bash: commit message that mentions the claimed file
+  {"tool_input":{"command":"git commit -q -F - <<EOT\ndocs: rewrite docs/ARCHITECTURE.md intro\nEOT"}}
+
+SILENT Bash: git add of a claimed file (staging is not editing)
+  {"tool_input":{"command":"git add docs/ARCHITECTURE.md"}}
