@@ -1,11 +1,19 @@
 {
   "name": "negative-control",
   "displayName": "negative-control",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Hooks that prove they can still see before you trust their silence.",
-  "author": { "name": "Volodymyr Kubiria", "url": "https://github.com/VolodymyrKubiria" },
+  "author": {
+    "name": "Volodymyr Kubiria",
+    "url": "https://github.com/VolodymyrKubiria"
+  },
   "repository": "https://github.com/VolodymyrKubiria/negative-control",
   "license": "MIT",
-  "keywords": ["hooks", "guardrails", "testing", "controls", "claude-code"],
-  "hooks": "./hooks/hooks.json"
+  "keywords": [
+    "hooks",
+    "guardrails",
+    "testing",
+    "controls",
+    "claude-code"
+  ]
 }

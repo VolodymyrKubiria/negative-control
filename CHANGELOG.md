@@ -1,5 +1,47 @@
 # Changelog
 
+## 0.4.0 — 2026-08-15
+
+**The plugin never loaded. Nothing said so.**
+
+`plugin.json` declared `"hooks": "./hooks/hooks.json"`. That file is loaded
+automatically by convention, so the explicit declaration was a duplicate — and a
+duplicate hooks file aborts hook loading for the whole plugin:
+
+```
+Status: ✘ loaded with errors
+Error: Duplicate hooks file detected … The standard hooks/hooks.json is loaded
+       automatically, so manifest.hooks should only reference ADDITIONAL files.
+```
+
+🔴 **`claude plugin validate --strict` returned "Validation passed" on both
+manifests while this was true.** A validator reporting clean on a broken artifact
+is precisely the failure this repository exists to name, encountered from the
+other side. Two lessons, both now mechanised rather than written down:
+
+- **Validation is not loading.** `doctor` now runs `claude --plugin-dir . plugin
+  list` when the CLI is present and fails on `loaded with errors`. Inverted:
+  restoring the defect turns the line red, removing it turns it green.
+- **"Unverified" was the correct label**, not excess caution. Had this shipped as
+  "verified" on the strength of a passing validator, the first person to install
+  it would have got silent, dead hooks.
+
+**Fixed**
+
+- `plugin.json` no longer declares `hooks` — the standard path is auto-discovered.
+- `marketplace.json` gained the `description` that `validate --strict` required.
+
+**Verified on a fresh clone from GitHub** (not the working copy): manifests pass
+`--strict`; `probe --self-test`, `doctor --self-test` and `probe --all` all exit 0;
+executable bits survive the clone; the plugin reports `✔ loaded` with
+`Hooks (2) UserPromptSubmit, PreToolUse` registered.
+
+**Still not verified** — stated precisely rather than rounded off:
+
+- Only macOS, only CLI 2.1.232, only via `--plugin-dir`. Installation through
+  `/plugin marketplace add` + `/plugin install` has not been exercised.
+- No Linux or Windows run. No run on a machine without `jq`.
+
 ## 0.3.0 — 2026-08-15
 
 The repository now meets its own standard. It did not before.

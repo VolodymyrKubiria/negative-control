@@ -158,6 +158,27 @@ if dep_present node; then
   else say_bad "receipt.mjs --self-test FAILS"; fi
 fi
 
+# The check that `validate` cannot make.
+#
+# 🔴 Measured 2026-08-15: `claude plugin validate --strict` returned "Validation
+#    passed" on BOTH manifests while the plugin failed to load — plugin.json
+#    declared ./hooks/hooks.json explicitly, which is loaded automatically, and
+#    the duplicate killed hook loading entirely. A validator that says OK on a
+#    broken artifact is the exact failure this repository is about, so the only
+#    honest check is to actually load it.
+if dep_present claude; then
+  echo
+  echo "── plugin loading ──"
+  pl="$(claude --plugin-dir "$ROOT" plugin list 2>&1 || true)"
+  if printf '%s' "$pl" | grep -q "loaded with errors"; then
+    say_bad "the plugin loads WITH ERRORS: $(printf '%s' "$pl" | grep -A1 'loaded with errors' | tail -1 | cut -c1-160)"
+  elif printf '%s' "$pl" | grep -q "✔ loaded"; then
+    say_ok "loads as a plugin (validate alone cannot tell you this)"
+  else
+    say_warn "could not determine plugin load status from this CLI"
+  fi
+fi
+
 echo
 echo "passed $ok · warnings $warn · problems $bad"
 if [[ $bad -eq 0 ]]; then
