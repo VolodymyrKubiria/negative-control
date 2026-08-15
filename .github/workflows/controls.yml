@@ -1,0 +1,98 @@
+name: controls
+
+# Runs every control suite on three operating systems.
+#
+# WHY A MATRIX AND NOT ONE MACHINE
+#   This repository was written on macOS, which ships bash 3.2 (2007) and BSD
+#   userland — the most restrictive combination of the three. Linux and its GNU
+#   tools are a superset, so the port direction is favourable. But "favourable"
+#   is a prediction, and the whole point here is to stop trusting those.
+#
+#   One BSD/GNU difference already shipped as a defect in 0.1.0: `\+` is a GNU
+#   sed extension, matched nothing on macOS, and left the sensitivity harness
+#   silently unable to read its own MUTATE line. That is exactly the class this
+#   matrix exists to catch, and it will catch it in the other direction too.
+#
+# THE FIRST STEP MEASURES, IT DOES NOT ASSUME
+#   Before running anything, each job prints what it actually found: bash
+#   version, which of jq/python3/node exist, and which sed flavour is present.
+#   Whatever the Windows runner turns out to have, the log will say so rather
+#   than us guessing in a README.
+#
+# NO continue-on-error ANYWHERE — deliberately.
+#   A badge that stays green by ignoring a failing platform is the precise thing
+#   this repository argues against. If Windows breaks, the badge goes red, and
+#   the honest options are to fix it or to drop that platform and say so.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  controls:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false          # one platform failing must not hide the others
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    defaults:
+      run:
+        shell: bash             # Git Bash on the Windows runner
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Environment — measured, not assumed
+        run: |
+          echo "os           : ${{ matrix.os }}"
+          echo "uname        : $(uname -a 2>/dev/null || echo n/a)"
+          echo "bash         : ${BASH_VERSION:-unknown}"
+          for c in jq python3 node sed grep paste cmp mktemp; do
+            if command -v "$c" >/dev/null 2>&1; then
+              printf '  %-8s ✅ %s\n' "$c" "$(command -v "$c")"
+            else
+              printf '  %-8s ✗ MISSING\n' "$c"
+            fi
+          done
+          # Which sed dialect? GNU understands \+, BSD does not.
+          if printf 'aab\n' | sed -n 's/a\+b/HIT/p' | grep -q HIT; then
+            echo "  sed dialect: GNU (understands \\+)"
+          else
+            echo "  sed dialect: BSD (does not understand \\+)"
+          fi
+
+      - name: chmod (git may not carry the bit on every platform)
+        run: chmod +x hooks/*.sh scripts/*.sh || true
+
+      - name: probe — the harness controls itself
+        run: bash scripts/probe.sh --self-test
+
+      - name: doctor — controls
+        run: bash scripts/doctor.sh --self-test
+
+      - name: attention-anchor — controls
+        run: bash hooks/attention-anchor.sh --self-test
+
+      - name: receipt — controls
+        run: node scripts/lib/receipt.mjs --self-test
+
+      - name: every hook, paired controls
+        run: bash scripts/probe.sh --all
+
+      - name: inversion — each guard blinded on purpose must go silent
+        run: |
+          fail=0
+          for h in attention-anchor claim-guard critical-path-guard; do
+            out="$(bash scripts/probe.sh "$h" --mutate)" || fail=1
+            echo "$out" | grep -E 'sensitivity|every EXPECT'
+            # A run that reports no sensitivity line measured nothing.
+            echo "$out" | grep -q 'sensitivity:' || { echo "🔴 $h produced no sensitivity line"; fail=1; }
+          done
+          exit $fail
+
+      - name: doctor — full report (config examples make one ❌ expected here)
+        run: bash scripts/doctor.sh || true
