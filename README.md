@@ -94,8 +94,20 @@ Both look like working code when you read them. Only a control catches them.
 | `probe.sh` | harness | Runs the paired controls. `--mutate` blinds a hook and requires every EXPECT to go silent. | self-checking |
 | `lib/receipt.mjs` | library | A run leaves a trace, so "I ran the self-test" stops being an unverifiable claim. | — |
 
-Everything is standalone bash and a single `.mjs`. No runtime dependencies beyond `jq`,
-`python3` and `bash`. Take one tool, take all of them.
+Everything is standalone bash plus a single `.mjs`. Take one tool, take all of them.
+
+**Requirements, measured rather than asserted:**
+
+| Tool | Needs | Without it |
+|---|---|---|
+| `critical-path-guard`, `claim-guard` | `bash`, `jq` | exits 0 silently — verified on a PATH with `jq` removed |
+| `attention-anchor` | `bash`; `python3` **optional** | still prints the base anchor; only trigger-word escalation stops working |
+| `probe.sh` | `bash`, `sed`, `grep`, `cmp`, `mktemp` | — |
+| `lib/receipt.mjs` | **`node`** | not used by the hooks; the guards work without it |
+
+Every guard fails *quiet and open*: a missing dependency makes it silent, never broken.
+That is the correct default for a hook — but it also means an absent `jq` gives you exactly
+the silence this whole repository is about. Check it once at install time.
 
 ## Install
 
