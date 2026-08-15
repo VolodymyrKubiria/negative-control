@@ -1,13 +1,22 @@
 {
   "name": "negative-control",
-  "owner": { "name": "Volodymyr Kubiria", "url": "https://github.com/VolodymyrKubiria" },
+  "owner": {
+    "name": "Volodymyr Kubiria",
+    "url": "https://github.com/VolodymyrKubiria"
+  },
+  "description": "Hooks and audit scripts that carry paired positive/negative controls, and refuse to report until they have proven they can still see.",
   "plugins": [
     {
       "name": "negative-control",
       "source": ".",
       "description": "Hooks that prove they can still see before you trust their silence.",
       "version": "0.3.0",
-      "keywords": ["hooks", "guardrails", "testing", "controls"]
+      "keywords": [
+        "hooks",
+        "guardrails",
+        "testing",
+        "controls"
+      ]
     }
   ]
 }
