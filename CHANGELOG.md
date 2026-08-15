@@ -1,5 +1,59 @@
 # Changelog
 
+## 0.3.0 — 2026-08-15
+
+The repository now meets its own standard. It did not before.
+
+**The gap, stated plainly**
+
+`probe.sh` demanded paired controls of every hook and had none of its own. It
+could have been unable to parse a case file and would still have printed
+`controls pass` — the precise silence this project exists to expose, in the one
+tool everything else depends on. `lib/receipt.mjs` had no controls either, and
+nothing in the repository called it.
+
+**Added**
+
+- **`probe.sh --self-test`** — 7 controls, run against a fixture tree rather than
+  this repository, so a green result means the harness works and not that this
+  repo happens to be tidy. Includes the control that would have caught the
+  BSD/GNU sed bug shipped in 0.1.0, and a vacuum control for a mutation that
+  changes no bytes.
+- **`NC_ROOT`** — lets the harness be aimed at a fixture tree. Without it the
+  harness could only ever be exercised against the real repo.
+- **`receipt.mjs --self-test`** — 7 controls. The load-bearing one: a **non-zero**
+  exit must be recorded as non-zero. A log that flattens red runs to green cannot
+  answer the only question it exists for — *was this detector ever actually red?*
+  Also vacuum controls for an empty log, a corrupt line, and an unwritable path.
+- **`probes/attention-anchor.cases`** — all three hooks are now covered the same
+  way by `probe.sh --all`, instead of two through the harness and one apart from
+  it. This hook prints on every prompt, so "no output" cannot be its quiet state;
+  every case pins a MATCH instead.
+- `doctor` now runs the `probe` and `receipt` control suites too.
+
+**Changed**
+
+- `receipt.mjs` resolves its path per call instead of once at import. A module
+  that can only run against one hard-coded location has behaviour that is
+  asserted, not measured.
+- In a fresh clone `doctor` ends with one ❌ — and now says so, explicitly, as a
+  demonstration rather than a defect: `config/` holds examples, so the guards
+  would defend a file your project does not have.
+
+**Control coverage, measured**
+
+| Tool | Controls |
+|---|---|
+| `attention-anchor` | 6 self-test + 6 probe cases |
+| `claim-guard` | 11 |
+| `critical-path-guard` | 11 |
+| `doctor` | 6 |
+| `probe` | 7 |
+| `receipt.mjs` | 7 |
+
+Every suite was inverted with a deliberate mutation, and the count of failures
+predicted before the run.
+
 ## 0.1.0 — 2026-08-15
 
 First release. Three hooks, one probe harness, one library.

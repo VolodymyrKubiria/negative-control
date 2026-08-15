@@ -49,11 +49,119 @@
 
 set -uo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# NC_ROOT exists so the controls below can aim this script at a fixture tree.
+# Without it the harness could only ever be exercised against the real repository,
+# and "it works here" is not the same claim as "it works".
+ROOT="${NC_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 HOOKS="$ROOT/hooks"
 CASES_DIR="$ROOT/probes"
 
 pass=0; fail=0; expect_fired=0; expect_total=0
+
+# ── controls for the harness itself ─────────────────────────────────────────
+#
+# The instrument that demands controls of every hook had none of its own. It
+# could report "all controls pass" while being unable to parse a case file, and
+# nothing would say otherwise — the same silence it exists to expose.
+#
+# Each control runs this script against a FIXTURE tree, not the real repository,
+# so a green result here means the harness works, not that this repo happens to
+# be in a good state.
+if [ "${1:-}" = "--self-test" ]; then
+  f=0
+  T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
+  mkdir -p "$T/hooks" "$T/probes" "$T/config"
+
+  # A fixture hook with exactly one branch: it speaks when it sees TRIP.
+  cat > "$T/hooks/fixture.sh" <<'FIX'
+#!/usr/bin/env bash
+in="$(cat 2>/dev/null)"
+case "$in" in *TRIP*) echo "FIXTURE-ALARM";; esac
+exit 0
+FIX
+  chmod +x "$T/hooks/fixture.sh"
+  run_probe() { NC_ROOT="$T" bash "$0" "$@" 2>&1; }
+
+  # ① a well-formed case file passes, and the exit code says so
+  cat > "$T/probes/fixture.cases" <<'C1'
+MUTATE s|TRIP|ZZZZ|
+EXPECT fires on the trip word
+  {"tool_input":{"command":"TRIP"}}
+SILENT stays quiet otherwise
+  {"tool_input":{"command":"harmless"}}
+C1
+  out="$(run_probe fixture)"; rc=$?
+  [ $rc -eq 0 ] || { echo "🔴 ① a passing case file returned $rc"; f=1; }
+  printf '%s' "$out" | grep -q "passed 2 · failed 0" \
+    || { echo "🔴 ① expected 2 passes, got: $(printf '%s' "$out" | grep passed)"; f=1; }
+
+  # ② POSITIVE for failure detection: an EXPECT the hook cannot satisfy must be
+  #    reported as failed. Without this, a harness hard-wired to say "pass" would
+  #    sail through ① and be worthless.
+  cat > "$T/probes/fixture.cases" <<'C2'
+MUTATE s|TRIP|ZZZZ|
+EXPECT demands firing on input the hook ignores
+  {"tool_input":{"command":"harmless"}}
+C2
+  out="$(run_probe fixture)"; rc=$?
+  [ $rc -eq 1 ] || { echo "🔴 ② a failing control did not exit 1 (got $rc)"; f=1; }
+  printf '%s' "$out" | grep -q "UNSOUND" \
+    || { echo "🔴 ② failure did not produce the UNSOUND verdict"; f=1; }
+
+  # ③ MATCH on a SILENT case: the string IS present, so it must be reported.
+  cat > "$T/probes/fixture.cases" <<'C3'
+MUTATE s|TRIP|ZZZZ|
+SILENT must not contain the alarm word
+  {"tool_input":{"command":"TRIP"}}
+  MATCH FIXTURE-ALARM
+C3
+  out="$(run_probe fixture)"; rc=$?
+  [ $rc -eq 1 ] || { echo "🔴 ③ MATCH on SILENT did not catch a present string"; f=1; }
+
+  # ④ MUTATE is actually extracted and applied. This is the control that would
+  #    have caught the BSD/GNU sed bug: the line was there, the harness could not
+  #    read it, and it reported "no MUTATE line" instead of failing loudly.
+  cat > "$T/probes/fixture.cases" <<'C4'
+MUTATE s|TRIP|ZZZZ|
+EXPECT fires on the trip word
+  {"tool_input":{"command":"TRIP"}}
+C4
+  out="$(run_probe fixture --mutate)"; rc=$?
+  [ $rc -eq 0 ] || { echo "🔴 ④ --mutate on a blinded hook returned $rc"; f=1; }
+  printf '%s' "$out" | grep -q "0 of 1 EXPECT cases still fired" \
+    || { echo "🔴 ④ sensitivity not reported as 0 of 1"; f=1; }
+
+  # ⑤ VACUUM: no MUTATE line means sensitivity cannot be measured — refuse.
+  cat > "$T/probes/fixture.cases" <<'C5'
+EXPECT fires on the trip word
+  {"tool_input":{"command":"TRIP"}}
+C5
+  run_probe fixture --mutate >/dev/null; rc=$?
+  [ $rc -eq 2 ] || { echo "🔴 ⑤ --mutate without a MUTATE line did not refuse (got $rc)"; f=1; }
+
+  # ⑥ VACUUM, the control on the control: a mutation that changes no bytes looks
+  #    identical to one that worked. It must be refused, not silently accepted.
+  cat > "$T/probes/fixture.cases" <<'C6'
+MUTATE s|zzz-matches-nothing-at-all|x|
+EXPECT fires on the trip word
+  {"tool_input":{"command":"TRIP"}}
+C6
+  out="$(run_probe fixture --mutate)"; rc=$?
+  [ $rc -eq 2 ] || { echo "🔴 ⑥ a no-op mutation was accepted (exit $rc)"; f=1; }
+  printf '%s' "$out" | grep -q "MUTATION DID NOT APPLY" \
+    || { echo "🔴 ⑥ no-op mutation did not say so"; f=1; }
+
+  # ⑦ VACUUM: an invented hook name must not produce a verdict at all.
+  run_probe zzz-no-such-hook >/dev/null; rc=$?
+  [ $rc -eq 2 ] || { echo "🔴 ⑦ a nonexistent hook did not exit 2 (got $rc)"; f=1; }
+
+  if [ $f -eq 0 ]; then
+    echo "✅ probe — 7/7 controls pass, the harness itself may be trusted"
+  else
+    echo "❌ probe UNSOUND — every report it produces is suspect"
+  fi
+  exit $f
+fi
 
 # ── run every case file ─────────────────────────────────────────────────────
 if [ "${1:-}" = "--all" ]; then

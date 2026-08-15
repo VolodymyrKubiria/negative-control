@@ -37,8 +37,13 @@ sensitivity: 0 of 5 EXPECT cases still fired while blinded (want 0)
 If that last line said `5 of 5 still fired`, the controls would be decorative and
 you would know it. That is the whole product.
 
-Only `bash` and `jq` are needed to get this far. `doctor` tells you if either is
-missing — and, more importantly, whether your config is still the shipped example.
+Only `bash` and `jq` are needed to get this far.
+
+> ℹ️ In a fresh clone `doctor` ends with **one ❌**, and that is the point, not a
+> defect: `config/` still holds the shipped examples, so the guards would run
+> perfectly while protecting `src/core/Ledger.ts` — a file your project does not
+> have. The check turns green when you replace them. A tool that stayed quiet
+> about that would be demonstrating the exact failure this repository is about.
 
 ---
 
@@ -124,12 +129,12 @@ Both look like working code when you read them. Only a control catches them.
 
 | Tool | Kind | What it does | Controls |
 |---|---|---|:---:|
-| `attention-anchor` | UserPromptSubmit | Gates *reasoning*, not actions: injects a reminder that an unconditional word or a named number must be measured before it is asserted. The only hook here that fires when **no tool call happens at all**. | ✅ 6 |
+| `attention-anchor` | UserPromptSubmit | Gates *reasoning*, not actions: injects a reminder that an unconditional word or a named number must be measured before it is asserted. The only hook here that fires when **no tool call happens at all**. | ✅ 6 + 6 |
 | `critical-path-guard` | PreToolUse | Escalates edits to configured load-bearing paths into a permission prompt. Watches `file_path` **and** the text of Bash commands. | ✅ 11 |
 | `claim-guard` | PreToolUse | Two agent sessions in one repo coordinate through a claims board instead of discovering the collision at commit time. Advisory, never blocking. | ✅ 11 |
 | `doctor.sh` | harness | Answers the one question a silent guard cannot: is this install able to do anything at all — deps, permissions, and whether `config/` is still the shipped example. | ✅ 6 |
-| `probe.sh` | harness | Runs the paired controls. `--mutate` blinds a hook and requires every EXPECT to go silent. | self-checking |
-| `lib/receipt.mjs` | library | A run leaves a trace, so "I ran the self-test" stops being an unverifiable claim. | — |
+| `probe.sh` | harness | Runs the paired controls. `--mutate` blinds a hook and requires every EXPECT to go silent — and carries controls of its own, because the instrument that grades everyone else was the one thing here nobody graded. | ✅ 7 |
+| `lib/receipt.mjs` | library | A run leaves a trace, so "I ran the self-test" stops being an unverifiable claim. The control that matters: a **non-zero** exit is recorded as non-zero — a log that flattens red runs to green cannot answer the only question it exists for. | ✅ 7 |
 
 Everything is standalone bash plus a single `.mjs`. Take one tool, take all of them.
 

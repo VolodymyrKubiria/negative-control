@@ -1,0 +1,37 @@
+# Controls for attention-anchor.
+#
+# This hook is different from the guards: it prints on EVERY prompt, so "produced
+# no output" cannot be its silent state. Every case therefore pins a MATCH — the
+# question is never "did it speak" but "did it say the escalated part".
+#
+# MUTATE points the hook at a config that does not exist. It then exits early and
+# says nothing at all, so every EXPECT below must go quiet.
+MUTATE s|^ANCHOR_FILE=.*|ANCHOR_FILE=/nonexistent-config-15082026|
+
+# ── sensitivity ──
+
+EXPECT base anchor prints on an ordinary prompt
+  {"prompt":"rename this variable"}
+  MATCH ATTENTION ANCHOR
+
+EXPECT escalation fires on a trigger word
+  {"prompt":"please audit the sync layer"}
+  MATCH full checklist
+
+EXPECT a different trigger word also fires
+  {"prompt":"prove that this is correct"}
+  MATCH full checklist
+
+# ── specificity ──
+
+SILENT no escalation without a trigger word
+  {"prompt":"rename this variable"}
+  MATCH full checklist
+
+SILENT a trigger-shaped word that is not in the list stays quiet
+  {"prompt":"refactor the parser module"}
+  MATCH full checklist
+
+SILENT malformed input does not produce the escalated block
+  {"not":"a prompt"}
+  MATCH full checklist

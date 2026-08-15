@@ -139,7 +139,7 @@ else
     [[ -f "$CONFIG_DIR/$c" ]] && say_ok "config/$c" || say_warn "config/$c missing — the tool that reads it will exit silently"
   done
   if found="$(has_placeholder "$CONFIG_DIR")"; then
-    say_bad "config still contains the shipped EXAMPLE «${found}» — the guards are protecting files that do not exist in your project. They will run, stay green, and defend nothing. Edit config/ before trusting them."
+    say_bad "config still contains the shipped EXAMPLE «${found}». In a fresh clone this ❌ is EXPECTED and is the tool demonstrating itself: the guards would run, stay green, and defend a file your project does not have. Edit config/ — this line turns green once no example values remain."
   else
     say_ok "config has been adapted (no shipped example values left)"
   fi
@@ -151,6 +151,12 @@ if bash "$ROOT/scripts/probe.sh" --all >/dev/null 2>&1; then say_ok "probe.sh --
 else say_bad "probe.sh --all FAILS — run it directly to see which control broke"; fi
 if bash "$ROOT/hooks/attention-anchor.sh" --self-test >/dev/null 2>&1; then say_ok "attention-anchor --self-test passes"
 else say_bad "attention-anchor --self-test FAILS"; fi
+if bash "$ROOT/scripts/probe.sh" --self-test >/dev/null 2>&1; then say_ok "probe.sh --self-test passes (the harness itself)"
+else say_bad "probe.sh --self-test FAILS — every report it produces is suspect"; fi
+if dep_present node; then
+  if node "$ROOT/scripts/lib/receipt.mjs" --self-test >/dev/null 2>&1; then say_ok "receipt.mjs --self-test passes"
+  else say_bad "receipt.mjs --self-test FAILS"; fi
+fi
 
 echo
 echo "passed $ok · warnings $warn · problems $bad"
