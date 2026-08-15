@@ -6,6 +6,42 @@ Every tool in this repository refuses to report until it has proven it can still
 
 ---
 
+## Try it in 60 seconds
+
+No install, no config, no account. Clone and run:
+
+```bash
+git clone https://github.com/VolodymyrKubiria/negative-control
+cd negative-control
+
+bash scripts/doctor.sh        # can this machine run any of it?
+bash scripts/probe.sh --all   # do the guards actually fire?
+```
+
+Then the part that matters — blind a guard on purpose and watch its controls
+catch it:
+
+```bash
+bash scripts/probe.sh critical-path-guard --mutate
+```
+
+```
+🧪 critical-path-guard — controls  (MUTATED: hook deliberately blinded)
+   ✅ went silent · Edit of a protected file
+   ✅ went silent · Bash: heredoc overwriting a protected file
+   …
+sensitivity: 0 of 5 EXPECT cases still fired while blinded (want 0)
+✅ every EXPECT went silent — these controls can actually fail
+```
+
+If that last line said `5 of 5 still fired`, the controls would be decorative and
+you would know it. That is the whole product.
+
+Only `bash` and `jq` are needed to get this far. `doctor` tells you if either is
+missing — and, more importantly, whether your config is still the shipped example.
+
+---
+
 ## The problem
 
 If you work with a coding agent you are accumulating detectors far faster than you notice.
@@ -91,6 +127,7 @@ Both look like working code when you read them. Only a control catches them.
 | `attention-anchor` | UserPromptSubmit | Gates *reasoning*, not actions: injects a reminder that an unconditional word or a named number must be measured before it is asserted. The only hook here that fires when **no tool call happens at all**. | ✅ 6 |
 | `critical-path-guard` | PreToolUse | Escalates edits to configured load-bearing paths into a permission prompt. Watches `file_path` **and** the text of Bash commands. | ✅ 11 |
 | `claim-guard` | PreToolUse | Two agent sessions in one repo coordinate through a claims board instead of discovering the collision at commit time. Advisory, never blocking. | ✅ 11 |
+| `doctor.sh` | harness | Answers the one question a silent guard cannot: is this install able to do anything at all — deps, permissions, and whether `config/` is still the shipped example. | ✅ 6 |
 | `probe.sh` | harness | Runs the paired controls. `--mutate` blinds a hook and requires every EXPECT to go silent. | self-checking |
 | `lib/receipt.mjs` | library | A run leaves a trace, so "I ran the self-test" stops being an unverifiable claim. | — |
 
@@ -111,14 +148,56 @@ the silence this whole repository is about. Check it once at install time.
 
 ## Install
 
-**Vendor it** — the path this repository has actually been run through:
+**Vendor it** — the path with evidence behind it. Verified end to end on a scratch project:
+files copied per these instructions, `settings.json` taken verbatim from the block below,
+and the hook invoked exactly as the harness invokes it. It fired on a protected path and
+stayed silent on an ordinary one.
 
 ```bash
 git clone https://github.com/VolodymyrKubiria/negative-control
-cp -r negative-control/hooks  your-project/.claude/
-cp -r negative-control/config your-project/.claude/
-# then wire the hooks in your-project/.claude/settings.json — see hooks/hooks.json
+cp -r negative-control/hooks   your-project/.claude/
+cp -r negative-control/config  your-project/.claude/
+cp -r negative-control/scripts your-project/.claude/
+cp -r negative-control/probes  your-project/.claude/
+chmod +x your-project/.claude/hooks/*.sh your-project/.claude/scripts/*.sh
 ```
+
+Then paste this into `your-project/.claude/settings.json`. If the file already has
+a `hooks` key, merge the arrays rather than replacing them:
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      { "hooks": [
+        { "type": "command",
+          "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/attention-anchor.sh\"" }
+      ]}
+    ],
+    "PreToolUse": [
+      { "matcher": "Edit|Write|Bash",
+        "hooks": [
+          { "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/critical-path-guard.sh\"" },
+          { "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/claim-guard.sh\"" }
+        ]}
+    ]
+  }
+}
+```
+
+> ⚠️ **Do not copy `hooks/hooks.json` into `settings.json` as-is.** They are two
+> different dialects and the difference is silent: the plugin file uses
+> `${CLAUDE_PLUGIN_ROOT}` and invokes the script directly, while a project needs
+> `${CLAUDE_PROJECT_DIR}` and — in practice — an explicit `bash` prefix. Paste the
+> wrong one and the hooks never fire, which looks exactly like hooks that found
+> nothing. Run `bash scripts/probe.sh --all` afterwards to confirm they are alive.
+
+Finally — **edit `config/`**. The shipped files are examples; they protect
+`src/core/Ledger.ts`, which does not exist in your project. `doctor` fails loudly
+while any example value is still in place, precisely so that a guard defending
+fiction cannot pass for a guard finding nothing.
 
 **As a Claude Code plugin** — manifests are included:
 
