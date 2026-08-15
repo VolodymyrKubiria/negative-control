@@ -65,6 +65,19 @@ jobs:
             echo "  sed dialect: BSD (does not understand \\+)"
           fi
 
+      # Distinct step names so a failure is diagnosable from the API alone.
+      # Job logs need an authenticated token; step names do not. A CI that can
+      # only be understood by a human with browser access is a CI that reports
+      # into a channel its own maintainer cannot read.
+      - name: dependency gate — bash
+        run: command -v bash
+      - name: dependency gate — jq (both guards need it)
+        run: command -v jq
+      - name: dependency gate — python3 (anchor escalation needs it)
+        run: command -v python3
+      - name: dependency gate — node (receipt needs it)
+        run: command -v node
+
       - name: chmod (git may not carry the bit on every platform)
         run: chmod +x hooks/*.sh scripts/*.sh || true
 
