@@ -90,6 +90,16 @@ jobs:
       - name: attention-anchor — controls
         run: bash hooks/attention-anchor.sh --self-test
 
+      # A control that only exists in a mode nobody runs is not a control.
+      # These two were added in 0.6.0 and are wired into CI in the same commit,
+      # deliberately: the whole defect that release fixes was a check living
+      # somewhere the pipeline never looked.
+      - name: critical-path-guard — controls
+        run: bash hooks/critical-path-guard.sh --self-test
+
+      - name: claim-guard — controls
+        run: bash hooks/claim-guard.sh --self-test
+
       - name: receipt — controls
         run: node scripts/lib/receipt.mjs --self-test
 

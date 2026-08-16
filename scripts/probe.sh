@@ -151,6 +151,32 @@ C6
   printf '%s' "$out" | grep -q "MUTATION DID NOT APPLY" \
     || { echo "🔴 ⑥ no-op mutation did not say so"; f=1; }
 
+  # ⑨ VACUUM, control N+1 for a real defect: a mutation that CHANGES the file
+  #    but leaves it unparseable. Every EXPECT then goes silent because bash
+  #    never started the hook, and the report reads as a perfect score. Two of
+  #    the three shipped MUTATE lines did exactly this until 2026-08-16.
+  cat > "$T/probes/fixture.cases" <<'C9'
+MUTATE s|^case |case( |
+EXPECT fires on the trip word
+  {"tool_input":{"command":"TRIP"}}
+C9
+  out="$(run_probe fixture --mutate)"; rc=$?
+  [ $rc -eq 2 ] || { echo "🔴 ⑨ an unparseable mutant was accepted (exit $rc)"; f=1; }
+  printf '%s' "$out" | grep -q "MUTANT DOES NOT PARSE" \
+    || { echo "🔴 ⑨ unparseable mutant did not say so"; f=1; }
+
+  # ⑨b NEGATIVE CONTROL on ⑨: a mutation that IS parseable must still be run.
+  #     Without this, a parse check that rejected everything would pass ⑨.
+  cat > "$T/probes/fixture.cases" <<'C9B'
+MUTATE s|TRIP|ZZZZ|
+EXPECT fires on the trip word
+  {"tool_input":{"command":"TRIP"}}
+C9B
+  out="$(run_probe fixture --mutate)"; rc=$?
+  [ $rc -eq 0 ] || { echo "🔴 ⑨b a valid mutant was rejected (exit $rc)"; f=1; }
+  printf '%s' "$out" | grep -q "MUTANT DOES NOT PARSE" \
+    && { echo "🔴 ⑨b a valid mutant was called unparseable"; f=1; }
+
   # ⑧ A case file with CRLF line endings must still work. This is control N+1
   #    for a real failure: on windows-latest, Git checks out CRLF by default, and
   #    `MATCH text\r` stopped matching the hook output. Every EXPECT in the
@@ -165,8 +191,12 @@ C6
   run_probe zzz-no-such-hook >/dev/null; rc=$?
   [ $rc -eq 2 ] || { echo "🔴 ⑦ a nonexistent hook did not exit 2 (got $rc)"; f=1; }
 
+  # The count is READ FROM THE SOURCE, not typed. A hand-maintained "8/8" drifts
+  # the first time a control is added — and a tool that ships an unmeasured
+  # number has no standing to ask anyone else for measured ones.
+  n="$(grep -cE '^  # [①②③④⑤⑥⑦⑧⑨]' "$0" 2>/dev/null)"
   if [ $f -eq 0 ]; then
-    echo "✅ probe — 8/8 controls pass, the harness itself may be trusted"
+    echo "✅ probe — $n/$n controls pass, the harness itself may be trusted"
   else
     echo "❌ probe UNSOUND — every report it produces is suspect"
   fi
@@ -217,6 +247,27 @@ if [ -n "$MUTATE" ]; then
   if cmp -s "$HOOK" "$TMP/mutated.sh"; then
     echo "❌ MUTATION DID NOT APPLY — the sed expression matched nothing."
     echo "   Everything below would be theatre. Fix the MUTATE line in $CASES."
+    exit 2
+  fi
+  # 🔴 CHANGED IS NOT ENOUGH — THE MUTANT MUST STILL RUN.
+  #
+  # A mutation that breaks the syntax makes every EXPECT go silent, and the
+  # report reads exactly like a perfect sensitivity result. Measured 2026-08-16:
+  # two of the three shipped MUTATE lines did this. `s/^names="\$(jq.*$/names=""/`
+  # replaced the FIRST line of a multi-line pipeline and orphaned its
+  # continuations, so bash refused to parse the file at all — and `probe --mutate`
+  # printed «every EXPECT went silent — these controls can actually fail» for a
+  # hook that had never started.
+  #
+  # The no-op check above could not catch it: the file DID change. Changed and
+  # still executable are two different questions, and only the second one makes
+  # the silence mean what the report says it means.
+  if ! bash -n "$TMP/mutated.sh" 2>/dev/null; then
+    echo "❌ MUTANT DOES NOT PARSE — the blinded hook cannot run at all."
+    echo "   Every EXPECT below would go silent for the wrong reason, and the"
+    echo "   result would read as a perfect score. Fix the MUTATE line in $CASES"
+    echo "   so it produces a hook that still runs, only blind."
+    bash -n "$TMP/mutated.sh" 2>&1 | sed 's/^/   /' | head -3
     exit 2
   fi
   TARGET="$TMP/mutated.sh"

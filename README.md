@@ -4,7 +4,9 @@
 
 **A detector that found nothing and a detector that cannot see produce byte-identical output.**
 
-Every tool in this repository refuses to report until it has proven it can still see.
+Every tool in this repository refuses to report until it has proven it can still see —
+its controls must be demonstrated capable of failing, and each guard checks at run time
+that its own config still parses.
 
 ---
 
@@ -112,8 +114,20 @@ sensitivity: 0 of 5 EXPECT cases still fired while blinded (want 0)
 ✅ every EXPECT went silent — these controls can actually fail
 ```
 
-The harness also controls *itself*: if the mutation doesn't change the file, it refuses to
-run and says so, because a mutation that changed nothing looks exactly like one that worked.
+The harness also controls *itself*, on two separate questions that are easy to confuse:
+
+- **Did the mutation change anything?** A mutation that changed nothing looks exactly like
+  one that worked.
+- **Does the mutant still run?** A mutation that broke the syntax also makes every `EXPECT`
+  go silent — and prints a flawless sensitivity score for a hook that never started. This
+  one shipped here undetected until 2026-08-16; see defect 3 below.
+
+Both refuse the run outright rather than grading it.
+
+And each guard carries a cheap run-time control of its own: if its config file is present
+but parses to nothing, it says so instead of going quiet. A guard reading an empty pattern
+matches nothing and passes everything, which is silence that means the opposite of what
+silence usually means here.
 
 ## This is not a hypothetical
 
@@ -124,18 +138,28 @@ had ever shipped:
 |---|---|---|
 | 1 | `cat <<EOT > protected.ts` did not trip `critical-path-guard` | The read-command amnesty list started with `cat`, so a heredoc **write** was filtered out as a read |
 | 2 | `probe.sh` silently could not find its own `MUTATE` line | It used `\+`, a GNU sed extension. On BSD sed (macOS) it matched nothing — so the instrument for measuring sensitivity was itself broken, and reported "no MUTATE line" for files that had one |
+| 3 | 🔴 **The headline demo above measured nothing at all** — for two of the three hooks | The `MUTATE` expression replaced the *first* line of a multi-line pipeline and orphaned its continuations. The mutant no longer parsed, so bash never started the hook. Every `EXPECT` went silent — and the run printed **`✅ every EXPECT went silent — these controls can actually fail`**. A perfect score, produced by a hook that never ran |
 
-Both look like working code when you read them. Only a control catches them.
+Both of the first two look like working code when you read them. Only a control catches them.
+
+Defect 3 is the one worth sitting with, because it is this repository's own thesis
+turned against it. The harness already refused a mutation that changed *nothing* —
+that control existed and passed. **Changed and still executable are two different
+questions**, and only the second one makes the silence mean what the report says.
+Found 2026-08-16, by asking a question nobody had asked the harness: run `bash -n`
+on the mutant. `probe.sh` now does exactly that before it will grade anything, and
+control ⑨ keeps that honest in both directions — an unparseable mutant must be
+refused, a valid one must still be run.
 
 ## What's in here
 
 | Tool | Kind | What it does | Controls |
 |---|---|---|:---:|
 | `attention-anchor` | UserPromptSubmit | Gates *reasoning*, not actions: injects a reminder that an unconditional word or a named number must be measured before it is asserted. The only hook here that fires when **no tool call happens at all**. | ✅ 6 + 6 |
-| `critical-path-guard` | PreToolUse | Escalates edits to configured load-bearing paths into a permission prompt. Watches `file_path` **and** the text of Bash commands. | ✅ 11 |
-| `claim-guard` | PreToolUse | Two agent sessions in one repo coordinate through a claims board instead of discovering the collision at commit time. Advisory, never blocking. | ✅ 11 |
+| `critical-path-guard` | PreToolUse | Escalates edits to configured load-bearing paths into a permission prompt. Watches `file_path` **and** the text of Bash commands. Refuses to stay quiet when its own config parses to zero paths. | ✅ 11 + 4 |
+| `claim-guard` | PreToolUse | Two agent sessions in one repo coordinate through a claims board instead of discovering the collision at commit time. Advisory, never blocking. Tells the difference between *no active claims* — normal — and *a board no row of which parses*, which is blindness. | ✅ 11 + 4 |
 | `doctor.sh` | harness | Answers the one question a silent guard cannot: is this install able to do anything at all — deps, permissions, and whether `config/` is still the shipped example. | ✅ 6 |
-| `probe.sh` | harness | Runs the paired controls. `--mutate` blinds a hook and requires every EXPECT to go silent — and carries controls of its own, because the instrument that grades everyone else was the one thing here nobody graded. | ✅ 7 |
+| `probe.sh` | harness | Runs the paired controls. `--mutate` blinds a hook and requires every EXPECT to go silent — and carries controls of its own, because the instrument that grades everyone else was the one thing here nobody graded. Since 0.6.0 it also refuses a mutant that no longer parses. | ✅ 10 |
 | `lib/receipt.mjs` | library | A run leaves a trace, so "I ran the self-test" stops being an unverifiable claim. The control that matters: a **non-zero** exit is recorded as non-zero — a log that flattens red runs to green cannot answer the only question it exists for. | ✅ 7 |
 
 Everything is standalone bash plus a single `.mjs`. Take one tool, take all of them.
@@ -269,10 +293,15 @@ breaks it breaks loudly instead of printing a reassuring nothing.
 
 ## Origin
 
-Extracted from the tooling of a production Android application — 73k lines of Kotlin, 1,672
-unit tests, built solo. The scripts here are generalized copies: the original project keeps
-its own, because a hook that has been moved away is a hook that has gone quiet, and a hook
-that has gone quiet does not announce it.
+Extracted from the tooling of a production Android application — 73,411 lines of Kotlin and
+1,683 unit tests **as measured on 2026-08-16**, built solo. The date is part of the claim on
+purpose: an undated number is a number that has already started drifting, and a repository
+that asks you for measured figures cannot ship unmeasured ones. This one moved by 11 tests
+in three days.
+
+The scripts here are generalized copies: the original project keeps its own, because a hook
+that has been moved away is a hook that has gone quiet, and a hook that has gone quiet does
+not announce it.
 
 ## License
 

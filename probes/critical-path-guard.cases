@@ -1,23 +1,36 @@
 # Controls for critical-path-guard.
-# MUTATE empties the configured path list, so nothing can ever match.
-MUTATE s/^names="\$(jq.*$/names=""/
+#
+# MUTATE neuters the pattern the hook matches against, so nothing can ever hit.
+#
+# 🔴 It used to empty the path list instead: `s/^names="\$(jq.*$/names=""/`.
+# That replaced the FIRST line of a multi-line pipeline and orphaned its
+# continuations, so the mutant did not parse and bash never started it. Every
+# EXPECT went silent for that reason and the run printed a perfect sensitivity
+# score. Fixed 2026-08-16 together with the harness check that now refuses an
+# unparseable mutant — see probe.sh control ⑨.
+MUTATE s|(\$names)|(ZZZ-NO-SUCH-PATTERN)|g
 
 # ── sensitivity ──
 
 EXPECT Edit of a protected file
   {"tool_input":{"file_path":"/repo/src/core/Ledger.ts"}}
+  MATCH attempted change to a protected path
 
 EXPECT Edit inside a protected directory
   {"tool_input":{"file_path":"/repo/src/core/migrations/003_add_index.sql"}}
+  MATCH attempted change to a protected path
 
 EXPECT Bash: sed -i on a protected file
   {"tool_input":{"command":"sed -i '' 's/x/y/' src/core/Ledger.ts"}}
+  MATCH attempted change to a protected path
 
 EXPECT Bash: heredoc overwriting a protected file
   {"tool_input":{"command":"cat <<EOT > src/core/Ledger.ts\nx\nEOT"}}
+  MATCH attempted change to a protected path
 
 EXPECT protected file matched by bare name, any directory
   {"tool_input":{"file_path":"/other/place/SecurityRules.kt"}}
+  MATCH attempted change to a protected path
 
 # ── specificity ──
 

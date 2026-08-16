@@ -40,6 +40,48 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="${NC_CONFIG_DIR:-$HERE/../config}"
 CONF="$CONFIG_DIR/critical-paths.json"
 
+# ── controls ────────────────────────────────────────────────────────────────
+# Must run before stdin is read, or --self-test would block waiting for input.
+if [ "${1:-}" = "--self-test" ]; then
+  command -v jq >/dev/null 2>&1 || { echo "🔴 self-test needs jq"; exit 1; }
+  fail=0
+  tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
+  run() { printf '%s' "$2" | NC_CONFIG_DIR="$1" bash "$0"; }
+
+  printf '{"reason":"t","paths":["src/core/Ledger.ts"]}\n' > "$tmp/critical-paths.json"
+  mkdir -p "$tmp/blind"
+  printf '{"reason":"t","paths":[]}\n' > "$tmp/blind/critical-paths.json"
+
+  edit_protected='{"tool_input":{"file_path":"/repo/src/core/Ledger.ts"}}'
+  edit_ordinary='{"tool_input":{"file_path":"/repo/src/ui/Button.tsx"}}'
+
+  # ① POSITIVE: a config that parses to zero paths must SAY it is blind.
+  out="$(run "$tmp/blind" "$edit_protected")"
+  printf '%s' "$out" | grep -q "UNSOUND" \
+    || { echo "🔴 ① blind config did not announce itself"; fail=1; }
+
+  # ② NEGATIVE CONTROL on ①: a healthy config must never claim to be blind.
+  #    Without this, a hook that shouts UNSOUND unconditionally would pass ①.
+  out="$(run "$tmp" "$edit_protected")"
+  printf '%s' "$out" | grep -q "UNSOUND" \
+    && { echo "🔴 ② healthy config wrongly reported UNSOUND"; fail=1; }
+
+  # ③ The blind branch must not swallow the hook's real job: with a healthy
+  #    config the protected path still raises the ordinary alarm. Anchored to
+  #    the alarm text, not to "some output" — ① and ② both produce output too.
+  printf '%s' "$out" | grep -q "attempted change to a protected path" \
+    || { echo "🔴 ③ protected path no longer raises the alarm"; fail=1; }
+
+  # ④ Specificity: an ordinary file stays silent under a healthy config.
+  [ -z "$(run "$tmp" "$edit_ordinary")" ] \
+    || { echo "🔴 ④ ordinary file produced output"; fail=1; }
+
+  [ $fail -eq 0 ] \
+    && echo "✅ critical-path-guard — 4/4 controls pass" \
+    || echo "❌ critical-path-guard UNSOUND — do not trust its silence"
+  exit $fail
+fi
+
 [ -f "$CONF" ] || exit 0
 command -v jq >/dev/null 2>&1 || exit 0
 
@@ -76,7 +118,30 @@ fi
 names="$(jq -r '.paths[]?' "$CONF" 2>/dev/null \
   | sed 's#\*\*/##g; s#\*##g; s#[.]#\\.#g' \
   | grep -v '^$' | paste -sd'|' -)"
-[ -z "$names" ] && exit 0
+
+# 🔴 ARMED BUT BLIND — the one state this hook must never keep to itself.
+#
+# The config exists and jq works, yet the parse produced nothing to match on.
+# Every check below would then compare against an empty pattern and pass, and
+# the resulting silence is byte-identical to "no protected path was touched".
+# That is the exact failure this repository is about, occurring inside the
+# repository's own guard.
+#
+# Missing config or missing jq stay silent by design (documented above): those
+# mean "not installed here". This is different — installed, running, and unable
+# to see. Added 2026-08-16, after an audit tool elsewhere printed a green
+# verdict for two days while its own self-test said it was unsound: the controls
+# existed, but only in a mode nobody runs.
+#
+# Deliberately NOT throttled. A repeated alarm desensitises — but this one stops
+# the moment the config is fixed, so its noise has an off switch that a false
+# alarm does not.
+if [ -z "$names" ]; then
+  jq -n --arg c "$CONF" '{
+    systemMessage: ("🔴 critical-path-guard UNSOUND — " + $c + " parsed to zero paths. The guard is armed but blind: it will stay silent on every protected path. Fix the config or remove the hook.")
+  }' 2>/dev/null
+  exit 0
+fi
 
 reason="$(jq -r '.reason // "This path is protected by critical-path-guard."' "$CONF" 2>/dev/null)"
 

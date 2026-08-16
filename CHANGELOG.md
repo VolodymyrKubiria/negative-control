@@ -1,5 +1,67 @@
 # Changelog
 
+## 0.6.0 — 2026-08-16
+
+**The headline demo was measuring nothing, for two of the three hooks.**
+
+`probe.sh <hook> --mutate` is the thing this repository is *for*: blind a guard on
+purpose, and require every `EXPECT` to go silent. Run it against `critical-path-guard`
+or `claim-guard` in 0.5.0 and it printed a flawless score. It was theatre.
+
+Both `MUTATE` expressions targeted the first line of a multi-line pipeline:
+
+```
+MUTATE s/^names="\$(jq.*$/names=""/
+```
+
+That left the continuation lines orphaned, so the mutant did not parse and bash never
+started the hook. Every `EXPECT` "went silent" — for a reason that has nothing to do
+with blindness — and the run concluded **`✅ every EXPECT went silent — these controls
+can actually fail`**.
+
+🔑 **The existing control could not see it, and the reason generalises.** The harness
+already refused a mutation that changed *nothing*, and that check passed here: the file
+*did* change. **Changed and still executable are two different questions.** Only the
+second one makes the silence mean what the report says it means.
+
+**What changed**
+
+- `probe.sh` runs `bash -n` on the mutant and refuses to grade anything if it does not
+  parse, printing `MUTANT DOES NOT PARSE` with the syntax error attached.
+- Controls ⑨ and ⑨b hold that honest in both directions: an unparseable mutant must be
+  refused, and a valid one must still be run — a parse check that rejected everything
+  would have passed ⑨ alone.
+- Both `MUTATE` lines rewritten to blind the *matching* instead of truncating an
+  assignment. Verified the way it should have been the first time: the mutant is
+  executable, and it still speaks when handed a blind config — proof it runs at all.
+- `probe.sh` now **counts its own controls from its own source** instead of printing a
+  hand-typed `8/8`. That number had already drifted the moment two controls were added.
+
+**Guards now carry a run-time control, not only a bench one**
+
+Controls that live in a mode nobody runs are controls in name only. Each guard now checks,
+on every invocation, that its own config still parses — and says so when it does not:
+
+- `critical-path-guard`: a `critical-paths.json` that parses to zero paths means the guard
+  is armed and matching against an empty pattern. It announces that instead of exiting 0.
+- `claim-guard`: the finer case. **No active claims is normal**; a board no row of which
+  parses is blindness. Those two produce identical silence, so they are separated by a
+  parse-health signal rather than by the claim count.
+- Both hooks gained `--self-test` (4 controls each), including the negative control that
+  matters most: a healthy config must never report itself blind.
+
+**MATCH-based cases, closing a loop 0.5.0 opened**
+
+The 0.5.0 entry ended by arguing for `MATCH` wherever output carries meaning — the Windows
+CRLF corruption went past both guards precisely because their cases compared empty against
+non-empty. Every `EXPECT` in `critical-path-guard.cases` and `claim-guard.cases` is now
+anchored to the alarm text. Verified load-bearing by swapping the marker for one that never
+appears: the suite goes red, then green again when restored.
+
+**Origin figures are now dated.** `73,411` lines of Kotlin and `1,683` unit tests, measured
+2026-08-16 — up 11 tests from the undated figure three days earlier. A repository that asks
+for measured numbers should not ship unmeasured ones.
+
 ## 0.5.0 — 2026-08-15
 
 **Three operating systems, and the Windows runner earned its keep on the first run.**

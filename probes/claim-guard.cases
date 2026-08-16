@@ -1,21 +1,32 @@
 # Controls for claim-guard.
-# MUTATE blinds the hook by making the claims board read as empty. Under
-# --mutate every EXPECT below must go silent, or that branch is not proven.
-MUTATE s/^claimed="\$(grep.*$/claimed=""/
+# MUTATE blinds the hook by neutering the needle it matches paths against.
+# Under --mutate every EXPECT below must go silent, or that branch is not proven.
+#
+# 🔴 It used to blank the claims list instead: `s/^claimed="\$(grep.*$/claimed=""/`.
+# Same defect as in critical-path-guard — it replaced the first line of a
+# multi-line pipeline, the mutant stopped parsing, and every EXPECT went silent
+# because bash never ran the hook at all. The run still printed a perfect
+# sensitivity score. Fixed 2026-08-16; probe.sh control ⑨ now refuses a mutant
+# that does not parse, so this class cannot come back quietly.
+MUTATE s|grep -qF "\$needle"|grep -qF "ZZZ-NO-SUCH-NEEDLE"|g
 
 # ── sensitivity: a claimed file, through every door an agent can use ──
 
 EXPECT Edit of a claimed doc
   {"tool_input":{"file_path":"/repo/docs/ARCHITECTURE.md"}}
+  MATCH CLAIMED FILE
 
 EXPECT Bash: python writes to a claimed doc
   {"tool_input":{"command":"python3 -c \"open('docs/ARCHITECTURE.md','a')\""}}
+  MATCH CLAIMED FILE
 
 EXPECT Bash: sed -i on a claimed doc
   {"tool_input":{"command":"sed -i '' s/a/b/ docs/ARCHITECTURE.md"}}
+  MATCH CLAIMED FILE
 
 EXPECT Bash: heredoc into a claimed doc
   {"tool_input":{"command":"cat <<EOT > docs/ARCHITECTURE.md\nx\nEOT"}}
+  MATCH CLAIMED FILE
 
 # ── specificity: everything that must stay quiet ──
 
