@@ -8,6 +8,10 @@ Every tool in this repository refuses to report until it has proven it can still
 its controls must be demonstrated capable of failing, and each guard checks at run time
 that its own config still parses.
 
+📄 **The practice, written up:** [A Detector That Only Ever Says "Clean" Proves Nothing](https://dev.to/volodymyrkubiria/a-detector-that-only-ever-says-clean-proves-nothing-mii)
+— why silence is the least trustworthy output a checker can produce, and the ten-minute fix
+borrowed from lab science.
+
 ---
 
 ## Try it in 60 seconds
