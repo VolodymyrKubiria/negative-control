@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# negative-control · https://github.com/VolodymyrKubiria/negative-control
+# Copyright 2026 Volodymyr Kubiria
+# SPDX-License-Identifier: Apache-2.0
 # claim-guard — keeps two agent sessions from editing the same file blind.
 #
 # THE FAILURE MODE IT EXISTS FOR

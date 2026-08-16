@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# negative-control · https://github.com/VolodymyrKubiria/negative-control
+# Copyright 2026 Volodymyr Kubiria
+# SPDX-License-Identifier: Apache-2.0
 # probe — paired controls for a hook, plus a mutation that measures whether the
 #         controls can actually fail.
 #

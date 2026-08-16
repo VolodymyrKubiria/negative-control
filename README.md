@@ -309,4 +309,11 @@ not announce it.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Apache-2.0 — see [LICENSE](LICENSE).
+
+Chosen over MIT deliberately, for two clauses that matter to a small tool travelling
+alone: **§4(b)** — anyone who modifies these files must say so, so a degraded fork is
+not mistaken for the original; and **§6** — the licence grants no right to use the
+author's name to endorse anything derived from it. Every file also carries an
+`SPDX-License-Identifier` header, because a vendored script leaves the LICENSE file
+behind and arrives with no provenance at all.

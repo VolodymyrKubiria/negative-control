@@ -1,14 +1,14 @@
 {
   "name": "negative-control",
   "displayName": "negative-control",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Hooks that prove they can still see before you trust their silence.",
   "author": {
     "name": "Volodymyr Kubiria",
     "url": "https://github.com/VolodymyrKubiria"
   },
   "repository": "https://github.com/VolodymyrKubiria/negative-control",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "keywords": [
     "hooks",
     "guardrails",

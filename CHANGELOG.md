@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.7.0 — 2026-08-16
+
+**Apache-2.0 instead of MIT, and provenance that travels with the file.**
+
+MIT let anyone take these scripts, change them badly and ship the result without a
+word — with the author's name still in a LICENSE file the copy left behind. Two
+Apache clauses close exactly that:
+
+- **§4(b)** — modified files must carry prominent notice of the change, so a degraded
+  fork cannot be mistaken for the original;
+- **§6** — no right is granted to use the author's name to endorse anything derived.
+
+The patent grant is beside the point for shell scripts; these two clauses are not.
+
+**Provenance in every file.** A vendored hook arrives without the LICENSE file, so
+all six now carry a three-line header — repository URL, copyright, and an
+`SPDX-License-Identifier`. Measured before the change: 0 of 6 files said where they
+came from.
+
+No `NOTICE` file. Apache requires propagating one only if the work already has it,
+and its content would duplicate the headers — a root-level artifact earning nothing.
+
+Nothing else changed: 12 control runs green, including all three mutation runs.
+
 ## 0.6.0 — 2026-08-16
 
 **The headline demo was measuring nothing, for two of the three hooks.**

@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# negative-control · https://github.com/VolodymyrKubiria/negative-control
+# Copyright 2026 Volodymyr Kubiria
+# SPDX-License-Identifier: Apache-2.0
 # doctor — checks that this installation can actually do anything.
 #
 # WHY THIS EXISTS

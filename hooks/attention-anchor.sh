@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# negative-control · https://github.com/VolodymyrKubiria/negative-control
+# Copyright 2026 Volodymyr Kubiria
+# SPDX-License-Identifier: Apache-2.0
 # attention-anchor — a gate on the axis no other hook watches.
 #
 # THE FAILURE MODE IT EXISTS FOR

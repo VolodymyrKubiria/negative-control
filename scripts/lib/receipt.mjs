@@ -1,3 +1,6 @@
+// negative-control · https://github.com/VolodymyrKubiria/negative-control
+// Copyright 2026 Volodymyr Kubiria
+// SPDX-License-Identifier: Apache-2.0
 // receipt — a tool leaves a trace of its own run: what, when, with which flags,
 //           and how it ended.
 //
