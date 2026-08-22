@@ -297,11 +297,21 @@ breaks it breaks loudly instead of printing a reassuring nothing.
 
 ## Origin
 
-Extracted from the tooling of a production Android application — 73,411 lines of Kotlin and
-1,683 unit tests **as measured on 2026-08-16**, built solo. The date is part of the claim on
+Extracted from the tooling of a production Android application — 74,388 lines of Kotlin and
+1,744 unit tests **as measured on 2026-08-22**, built solo. The date is part of the claim on
 purpose: an undated number is a number that has already started drifting, and a repository
-that asks you for measured figures cannot ship unmeasured ones. This one moved by 11 tests
-in three days.
+that asks you for measured figures cannot ship unmeasured ones.
+
+Two re-measurements in, the drift is no longer a hypothetical: 11 tests in the three days
+before 2026-08-16, then 61 more in the six days after it. The line count moved by 977 over
+the same six days. Nothing here was rewritten to make those numbers move — they moved
+because the original project kept being worked on, which is exactly why a figure quoted
+without a date is worth less than no figure at all.
+
+Both numbers are reproducible against the source tree: lines are
+`app/src/main/**/*.kt`, tests are the unit suite. Applying that method to the 2026-08-16
+state returns 73,485 against the 73,411 published then — a 74-line gap, which is what
+"measured on a day" honestly means.
 
 The scripts here are generalized copies: the original project keeps its own, because a hook
 that has been moved away is a hook that has gone quiet, and a hook that has gone quiet does

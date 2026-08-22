@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.7.1 — 2026-08-22
+
+**The origin figures were re-measured, and the method is now stated.**
+
+`74,388` lines of Kotlin and `1,744` unit tests, measured 2026-08-22 — up `977` lines and
+`61` tests from the 2026-08-16 figures. Six days. Nothing was rewritten to move them; the
+original project simply kept being worked on.
+
+This is the second re-measurement, and the first one where the drift can be compared
+against itself: `11` tests in the three days before 2026-08-16, `61` in the six days after.
+A single dated number proves the author looked once. Two of them show the rate.
+
+**The method is published with the numbers.** Lines are `app/src/main/**/*.kt`; tests are
+the unit suite. Previously the figures were quoted without saying how they were taken —
+which is the same defect this repository exists to complain about, one level up: a number
+whose derivation is invisible cannot be checked, and an unchecked number is indistinguishable
+from a confident guess.
+
+Applying the stated method to the 2026-08-16 tree returns `73,485` against the `73,411`
+published that day. The 74-line gap is not corrected and not hidden: it is what "measured
+on a day" costs, and burying it would have been the dishonest option.
+
+No script, hook, probe or licence changed in this release.
+
 ## 0.7.0 — 2026-08-16
 
 **Apache-2.0 instead of MIT, and provenance that travels with the file.**
